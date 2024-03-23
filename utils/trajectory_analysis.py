@@ -17,7 +17,7 @@ import os
 
 # Define class
 class traj_analysis:
-    def __init__(self,pdb_path,xtc_path,probe_sel='protein',analyte_sel='protein'):
+    def __init__(self,config):
         '''
         Initialiase the class.
         pdb_path (str)  : String identifying the file to use for the pdb by a local path.
@@ -25,33 +25,30 @@ class traj_analysis:
         probe (str)     : The selection for the probe, using MDAnalysis selection language.
         analyte (str)   : The selection for the analyte, using MDAnalysis selection language.
         '''
-        self.pdb_path = pdb_path
-        self.xtc_path = xtc_path
+        self.config = config
+        self.pdb_path = self.config["input"]["pdb_path"]
+        self.xtc_path = self.config["input"]["xtc_path"]
         # Not sure if the filename without the path will be helpful, but maybe
-        self.pdb_filename = os.path.split(pdb_path[-1])
-        self.xtc_filename = os.path.split(xtc_path[-1])
+        self.pdb_filename = os.path.split(self.pdb_path[-1])
+        self.xtc_filename = os.path.split(self.xtc_path[-1])
         # By default the probe and analyte are 'protein'
         # This gives protein-protein interactions
-        self.probe_sel = probe_sel
-        self.analyte_sel = analyte_sel
+        self.probe_sel = self.config["input"]["probe_sel"]
+        self.analyte_sel = self.config["input"]["analyte_sel"]
         self.n_jobs = cpu_count() # <--- CPUs available for multithreading
-
     
-    def def_load_in_uni(self):
+    def load_in_uni(self):
         '''
         A function to load in an MDA universe if one isn't already loaded.
         '''
-        try:
-            print(self.mda_universe)
-            print('...universe already loaded...')
-        except:
-            self.mda_universe = mda.Universe(self.pdb_path,self.xtc_path)
+        self.mda_universe = mda.Universe(self.pdb_path,self.xtc_path)
     
     def frame_to_time(self,frame_in):
         '''
         A function convert a frame to time (ps) of simulation for providing input to contact analysis.
         '''
-        self.def_load_in_uni()
+        if not hasattr(self, "mda_universe"):
+            self.load_in_uni()
         self.time = frame_in*self.mda_universe.trajectory.dt
         return self.time
     
@@ -59,11 +56,12 @@ class traj_analysis:
         '''
         A function convert a time (ps) to frame of simulation for providing input to contact analysis.
         '''
-        self.def_load_in_uni()
+        if not hasattr(self, "mda_universe"):
+            self.load_in_uni()
         self.frame = time_in/self.mda_universe.trajectory.dt
         return self.frame
     
-    def pre_cont_pro(self,start,stop,skip):
+    def pre_report(self,start,stop,skip):
         '''
         A function to report useful information on proposed imput parameters for a system before it is analysed.
         This saves the used from having to experiment with run time so much.
@@ -81,7 +79,8 @@ class traj_analysis:
         '''
         A function to provide information about the analyte such as protein residue, atoms, etc.
         '''
-        self.def_load_in_uni()
+        if not hasattr(self, "mda_universe"):
+            self.load_in_uni()
         try:
             print(self.analyte_loaded)
             print('...analyte already selected...')
@@ -93,13 +92,13 @@ class traj_analysis:
     def cont_per_frame(self,frame_index,cont_dist,carbon,segid='A'): # <--- The actual function which is executed on each CPU
         '''
         A function to perform contact analysis per frame to allow for multithreading.
-        This function assumes to first chain only but the actual value is given from the contact function.
+        This function assumes to first chain only but the actual value is given from
+        the contact function.
         frame_index (int)   : The frame for which the node is calculating.
         cont_dist (float)   : The distance (Angstroms) over which to consider a contact.
         carbon (boolean)    : Whether to include carbons or not. This decreases accuracy but can save on time.
         segid (str)         : The segid of the protein to calculate for.
         '''
-        # print('Reached frame '+str(frame_index)+'           ',end='\r')
         print(str(frame_index),end='\r')
         self.mda_universe.trajectory[frame_index] # <--- Select the frame for analysis
         residue_contacts=[] # <--- Create an empty array to store the contacts per residue in
@@ -127,7 +126,8 @@ class traj_analysis:
         stop (int)          : The frame in simulation to stop analysis on.
         skip (int)          : The frames to skip between calculations. This can save run time.
         '''
-        self.def_load_in_uni()
+        if not hasattr(self, "mda_universe"):
+            self.load_in_uni()
         self.get_analyte_info()
         print('Segids to analyse: ',str(int(len(self.analyte_segids))))
         print('Resids to analyse: ',str(int(len(self.analyte_resids))))
