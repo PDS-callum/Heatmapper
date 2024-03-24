@@ -162,3 +162,5 @@ cython_debug/
 # Additions
 test_data
 deprecated
+run.ipynb
+tmp

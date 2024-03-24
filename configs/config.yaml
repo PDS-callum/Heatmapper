@@ -1,3 +1,5 @@
 input:
-  pdb_path: test_data\\npt.pdb
-  xtc_path: test_data\\run_short_fix.xtc
+  pdb_path: test_data\CX5.pdb
+  xtc_path: test_data\CX5_skip_10.xtc
+  probe_sel: "protein"
+  analyte_sel: "protein"

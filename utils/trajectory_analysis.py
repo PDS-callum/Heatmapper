@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import nglview as nv
+from multiprocessing import Manager
 import os
 
 # quotes = ['"Lets-a go" - Chris Pratt','"I look very much forward to showing my financials, because they are huge." - Donald Trump','"I did not copy Gromacs" - Some rad guy, probably',
@@ -112,7 +113,8 @@ class traj_analysis:
             distances = mda.analysis.distances.distance_array(group_A.positions, group_B.positions) # <--- Get distances
             contact_count = np.count_nonzero(distances <= cont_dist) # <--- Count the number of distances under the cutoff
             residue_contacts.append(contact_count) # <--- Add the number of contacts for that residus
-        print('b')
+        # self.df_dict[frame_index] = residue_contacts
+        # print(self.df_dict)
         df_out = pd.read_csv('tmp\\contact_analysis_data_'+str(segid)+'.csv')
         df_out[str(frame_index)] = residue_contacts
         df_out.to_csv('tmp\\contact_analysis_data_'+str(segid)+'.csv',index=False)
@@ -128,6 +130,8 @@ class traj_analysis:
         '''
         if not hasattr(self, "mda_universe"):
             self.load_in_uni()
+        manager = Manager()
+        self.df_dict = manager.dict()
         self.get_analyte_info()
         print('Segids to analyse: ',str(int(len(self.analyte_segids))))
         print('Resids to analyse: ',str(int(len(self.analyte_resids))))
@@ -145,9 +149,9 @@ class traj_analysis:
             print('Working on it...')
             with Pool(self.n_jobs) as worker_pool: # <--- Create a pool of CPUs to use
                 worker_pool.map(run_per_frame, self.analysis_frame_values) # <--- Run the per frame function on a select CPU
-            print('here')
             segid_iter+=1
             print('\n')
+        print(self.df_dict)
 
     def gen_map(self,df_data,res_op=1,res_rep='spacefill',res_rad=0,BB_only=True):
         '''
