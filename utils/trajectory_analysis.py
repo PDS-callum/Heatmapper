@@ -113,11 +113,13 @@ class traj_analysis:
             distances = mda.analysis.distances.distance_array(group_A.positions, group_B.positions) # <--- Get distances
             contact_count = np.count_nonzero(distances <= cont_dist) # <--- Count the number of distances under the cutoff
             residue_contacts.append(contact_count) # <--- Add the number of contacts for that residus
-        # self.df_dict[frame_index] = residue_contacts
-        # print(self.df_dict)
-        df_out = pd.read_csv('tmp\\contact_analysis_data_'+str(segid)+'.csv')
-        df_out[str(frame_index)] = residue_contacts
-        df_out.to_csv('tmp\\contact_analysis_data_'+str(segid)+'.csv',index=False)
+        self.df_dict[frame_index] = residue_contacts
+
+    def proxy_to_dict(self,dict_proxy:multiprocessing.Manager)->dict:
+        dict_out = {}
+        for key in dict_proxy.keys():
+            dict_out[key] = dict_proxy[key]
+        return dict_out
         
     def cont_pro(self,cont_dist=3.3,carbon=True,start=0,stop=-1,skip=1):
         '''
@@ -150,8 +152,8 @@ class traj_analysis:
             with Pool(self.n_jobs) as worker_pool: # <--- Create a pool of CPUs to use
                 worker_pool.map(run_per_frame, self.analysis_frame_values) # <--- Run the per frame function on a select CPU
             segid_iter+=1
-            print('\n')
-        print(self.df_dict)
+        df = pd.DataFrame(self.proxy_to_dict(self.df_dict))
+        return df[sorted(list(df.columns))]
 
     def gen_map(self,df_data,res_op=1,res_rep='spacefill',res_rad=0,BB_only=True):
         '''
